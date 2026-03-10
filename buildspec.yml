@@ -1,0 +1,50 @@
+# AWS CodeBuild buildspec for logistics app
+# Builds frontend (S3/CloudFront) and backend Docker image (ECR)
+
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+      - REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME
+
+  build:
+    commands:
+      # Build frontend (static site for CloudFront/S3)
+      - echo "Building frontend..."
+      - cd frontend
+      - npm ci
+      - |
+        if [ -n "$VITE_API_URL" ]; then export VITE_API_URL; fi
+        if [ -n "$VITE_COGNITO_USER_POOL_ID" ]; then export VITE_COGNITO_USER_POOL_ID; fi
+        if [ -n "$VITE_COGNITO_CLIENT_ID" ]; then export VITE_COGNITO_CLIENT_ID; fi
+        npm run build
+      - cd ..
+
+      # Build backend Docker image
+      - echo "Building backend Docker image..."
+      - cd backend
+      - npm install
+      - docker build -t $REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION .
+      - docker tag $REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION $REPO_URI:latest
+      - cd ..
+
+  post_build:
+    commands:
+      - echo "Pushing image to ECR..."
+      - docker push $REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - docker push $REPO_URI:latest
+
+artifacts:
+  files:
+    - frontend/dist/**/*
+  base-directory: frontend
+
+env:
+  variables:
+    # Override in CodeBuild: ECR_REPO_NAME, AWS_REGION
+    # Optional: VITE_API_URL, VITE_COGNITO_*, etc. for frontend build
+  parameter-store:
+    # Optional: /CodeBuild/DB_* for backend secrets
