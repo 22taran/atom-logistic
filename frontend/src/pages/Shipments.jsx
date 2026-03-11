@@ -18,7 +18,7 @@ export default function Shipments() {
 
   useEffect(() => {
     api.get('/api/shipments')
-      .then(setShipments)
+      .then((data) => setShipments(Array.isArray(data) ? data : []))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
