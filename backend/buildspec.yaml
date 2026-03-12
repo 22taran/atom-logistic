@@ -1,0 +1,24 @@
+# Buildspec for atom-logistic backend (Node.js Docker)
+# Env vars from Terraform CodeBuild: ECR_URI, CONTAINER_NAME, DOCKERFILE_PATH, DOCKER_BUILD_CONTEXT
+# CodePipeline sources repo; output goes to ECR for ECS deploy.
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_URI
+      - echo "Building Docker image..."
+  build:
+    commands:
+      - docker build -t $CONTAINER_NAME -f $DOCKERFILE_PATH $DOCKER_BUILD_CONTEXT
+      - docker tag $CONTAINER_NAME $ECR_URI:latest
+  post_build:
+    commands:
+      - echo Writing image definitions file
+      - printf '[{"name":"${CONTAINER_NAME}","imageUri":"%s"}]' $ECR_URI:latest > ../imagedefinitions.json
+      - cat ../imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
