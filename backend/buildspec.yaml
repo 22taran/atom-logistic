@@ -9,17 +9,19 @@ phases:
       - cd backend
       - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_URI
+      - export IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
+      - echo "Image tag (short SHA):" $IMAGE_TAG
       - echo "Building Docker image..."
   build:
     commands:
       - echo "Building Docker image..."
-      - docker build -t $ECR_URI:latest .
+      - docker build -t $ECR_URI:$IMAGE_TAG .
       - echo "Pushing image..."
-      - docker push $ECR_URI:latest
+      - docker push $ECR_URI:$IMAGE_TAG
   post_build:
     commands:
       - echo Writing image definitions file
-      - printf '[{"name":"${CONTAINER_NAME}","imageUri":"%s"}]' $ECR_URI:latest > ../imagedefinitions.json
+      - printf '[{"name":"${CONTAINER_NAME}","imageUri":"%s"}]' $ECR_URI:$IMAGE_TAG > ../imagedefinitions.json
       - cat ../imagedefinitions.json
 
 artifacts:
