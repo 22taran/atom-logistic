@@ -12,8 +12,10 @@ phases:
       - echo "Building Docker image..."
   build:
     commands:
-      - docker build -t $CONTAINER_NAME -f $DOCKERFILE_PATH $DOCKER_BUILD_CONTEXT
-      - docker tag $CONTAINER_NAME $ECR_URI:latest
+      - echo "Building Docker image..."
+      - docker build -t $ECR_URI:latest .
+      - echo "Pushing image..."
+      - docker push $ECR_URI:latest
   post_build:
     commands:
       - echo Writing image definitions file
