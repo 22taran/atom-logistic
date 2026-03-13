@@ -21,7 +21,7 @@ phases:
   post_build:
     commands:
       - echo Writing image definitions file
-      - printf '[{"name":"${CONTAINER_NAME}","imageUri":"%s"}]' $ECR_URI:$IMAGE_TAG > ../imagedefinitions.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $ECR_URI:$IMAGE_TAG > ../imagedefinitions.json
       - cat ../imagedefinitions.json
 
 artifacts:
